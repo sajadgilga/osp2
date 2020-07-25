@@ -32,17 +32,17 @@
 
 // type definitions
 
-typedef struct Node
+typedef struct User
 {
     int uid;
-    int secl;
-    struct Node *next;
+    int sl;
+    struct User *next;
 } user_entry;
-typedef struct Nodef
+typedef struct File
 {
     char *path;
-    int secl;
-    struct Nodef *next;
+    int sl;
+    struct File *next;
 } file_entry;
 typedef asmlinkage long (*custom_open) (const char __user *filename, int flags, umode_t mode);
 typedef asmlinkage long (*sys_call_ptr_t)(const struct pt_regs *);
@@ -79,11 +79,11 @@ file_entry * find_file_entry( char * path ){
     return cur;
 }
 
-void new_user(int uid, int secl)
+void new_user(int uid, int sl)
 {
     user_entry *entry = find_user_entry(uid);
     if(entry != NULL){
-        entry->secl = secl;
+        entry->sl = sl;
         return;
     }
     entry = (user_entry*) kmalloc(sizeof(user_entry), GFP_KERNEL);
@@ -93,17 +93,17 @@ void new_user(int uid, int secl)
         return;
     }
     entry->uid = uid;
-    entry->secl = secl;
+    entry->sl = sl;
     entry->next = users;
     users = entry;
-    printk(KERN_INFO "new user entry added %d - uid(%d) - secl(%d)\n", ++users_count, uid, secl);
+    printk(KERN_INFO "new user entry added %d - uid(%d) - sl(%d)\n", ++users_count, uid, sl);
 }
 
-void new_file(char *path, int secl)
+void new_file(char *path, int sl)
 {   
     file_entry *entry = find_file_entry(path);
     if(entry != NULL){
-        entry->secl = secl;
+        entry->sl = sl;
         return;
     }
     entry = (file_entry*) kmalloc(sizeof(file_entry), GFP_KERNEL);
@@ -113,10 +113,10 @@ void new_file(char *path, int secl)
         return;
     }
     entry->path = path;
-    entry->secl = secl;
+    entry->sl = sl;
     entry->next = files;
     files = entry;
-    printk(KERN_INFO "new file entry added %d - path(%s) - secl(%d)\n", ++files_count, path, secl);
+    printk(KERN_INFO "new file entry added %d - path(%s) - sl(%d)\n", ++files_count, path, sl);
 }
 
 struct file *open_file(const char *path, int flags, int rights) 
@@ -134,13 +134,13 @@ struct file *open_file(const char *path, int flags, int rights)
     return file_ptr;
 }
 
-void tracker(const char * filename, int secf,  int current_user_id, int secu, int wo, int rw){
+void tracker(const char * filename, int file_sl,  int current_user_id, int user_sl, int wo, int rw){
     char data[1024];
     struct timespec now;
     getnstimeofday(&now);
     
-    sprintf(data, "record:\nuid: %d - secu: %d - filepath: %s - secf: %d - r(%d)w(%d)rw(%d) - time(%.2lu:%.2lu:%.2lu:%.6lu)\n", 
-         current_user_id, secu, filename, secf, (!(wo|rw) ? 1: 0), (wo ? 1: 0), (rw ? 1: 0), (now.tv_sec / 3600) % (24),
+    sprintf(data, "record:\nuid: %d - user_sl: %d - filepath: %s - file_sl: %d - r(%d)w(%d)rw(%d) - time(%.2lu:%.2lu:%.2lu:%.6lu)\n", 
+         current_user_id, user_sl, filename, file_sl, (!(wo|rw) ? 1: 0), (wo ? 1: 0), (rw ? 1: 0), (now.tv_sec / 3600) % (24),
                    (now.tv_sec / 60) % (60), now.tv_sec % 60, now.tv_nsec / 1000);
 
     struct file * tracker_file =  open_file("/tmp/os.log", O_WRONLY|O_CREAT|O_APPEND, 0777);
@@ -162,11 +162,11 @@ static asmlinkage long open_syscall(const char __user *filename, int flags, umod
     user_entry * iuser;
     file_entry * ifile;
     int current_user_id = (int) get_current_user()->uid.val;
-    int secu = 0, secf = 0;
+    int user_sl = 0, file_sl = 0;
 
+    char kfilename[256];
     char *ptr = kfilename, *buffer = filename;
-    char kfilename[MAX_PATH_LEN];
-    int bytes_count_cpy = MAX_PATH_LEN;
+    int bytes_count_cpy = 256;
     while (bytes_count_cpy--){
         get_user(*ptr, buffer++);
         if(*(ptr++) == '\0')
@@ -177,17 +177,17 @@ static asmlinkage long open_syscall(const char __user *filename, int flags, umod
 	int read_write = flags & O_RDWR;
 	
     if((iuser = find_user_entry(current_user_id))!= NULL)
-        secu = iuser->secl;
+        user_sl = iuser->sl;
 
     if((ifile = find_file_entry(kfilename))!= NULL){
-        secf = ifile->secl;
-        tracker(kfilename, secf, current_user_id,  secu, write_only, read_write );
+        file_sl = ifile->sl;
+        tracker(kfilename, file_sl, current_user_id,  user_sl, write_only, read_write );
     }
 
-    if (secu == secf)
+    if (user_sl == file_sl)
 		return open_table(filename, flags, mode);
     
-    if( secu < secf) {
+    if( user_sl < file_sl) {
         if(write_only)
             return open_table(filename, flags, mode);
         printk(KERN_INFO "can not read\n");
@@ -206,7 +206,7 @@ static asmlinkage long open_syscall(const char __user *filename, int flags, umod
 static ssize_t device_file_read(struct file *file_ptr, char __user *user_buffer, size_t count, loff_t *position) {
 	printk( KERN_NOTICE "device file is read at offset = %i, read byters count = %u", (int)*position, (unsigned int) count);	
 	
-    char *read_data = (char*) kmalloc(((256 * files_count + 32 * users_count) + 1) * sizeof(char), GFP_KERNEL);
+    char *read_data = (char*) kmalloc(((256 * files_count + 32 * users_count) + 2) * sizeof(char), GFP_KERNEL);
     char *read_data_ptr;
 
     file_entry *ifile = files;
@@ -215,7 +215,7 @@ static ssize_t device_file_read(struct file *file_ptr, char __user *user_buffer,
     sprintf(read_data, "");
     while (ifile != NULL)
     {
-        sprintf(read_data, "%s%d%s:", read_data, ifile->secl, ifile->path);
+        sprintf(read_data, "%s%d%s:", read_data, ifile->sl, ifile->path);
         ifile = ifile->next;
     }
     if (iuser != NULL)
@@ -223,7 +223,7 @@ static ssize_t device_file_read(struct file *file_ptr, char __user *user_buffer,
         sprintf(read_data, "%susers:", read_data);
         while (iuser != NULL)
         {
-            sprintf(read_data, "%s%d%d:", read_data, iuser->secl, iuser->uid);
+            sprintf(read_data, "%s%d%d:", read_data, iuser->sl, iuser->uid);
             iuser = iuser->next;
         }
     }
@@ -239,7 +239,7 @@ static ssize_t device_file_read(struct file *file_ptr, char __user *user_buffer,
 
 static ssize_t device_file_write(struct file *file_ptr, const char *user_buffer, size_t count, loff_t *position) {
     char *ptr;
-    char input_buffer[MAX_PATH_LEN];
+    char input_buffer[256];
     int bytes_count_cpy = count;
 
     ptr = input_buffer;
