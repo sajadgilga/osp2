@@ -7,7 +7,7 @@
 int main(int argc, char* argv[]) {
 	int i;
 	system("sudo rm /dev/OS_phase2_driver");
-	system("sudo mknod -m 666 /dev/OS_phase2_driver c 241 0");
+	system("sudo mknod -m 666 /dev/OS_phase2_driver c 250 0");
 	char users[1000][32];
 	char files[1000][256];
 	int userCnt = 0, fileCnt = 0;
@@ -19,38 +19,39 @@ int main(int argc, char* argv[]) {
 		char detail[256];
 		int size = 35;
 		char buf[259];
-		scanf("%d %d %s", &cmd, &sl, detail);
+		scanf("%d %d", &cmd, &sl);
 		if (cmd == 2) {
-			int fid = atoi(detail);
+			int fid = 0, rw;
+			scanf("%d %d", &rw, &fid);
 			int fd;
 			fd = open(files[fid], O_RDWR|O_APPEND|O_CREAT);
-			if (sl == 0) {
+			if (rw == 0) {
 				read(fd, buf, 256);
-				printf("%s", buf);
+				printf("%s\n", buf);
 			}
-			else if (sl == 1) {
+			else if (rw == 1) {
 				write(fd, files[fid], strlen(files[fid]));
 			}
 			else {
 				write(fd, files[fid], strlen(files[fid]));
 				read(fd, buf, 256);
-				printf("%s", buf);
+				printf("%s\n", buf);
 			}
 			close(fd);
 			continue;
 		}
-
+		scanf("%s", detail);
 		buf[0] = '0';
 		buf[1] = sl;
 		if (cmd == 0) {
-			printf("userId: %d", userCnt);
+			printf("userId: %d\n", userCnt);
 			int j;
 			for (j = 0; j < 32; j++) {
 				users[userCnt++][j] = detail[j];
 				buf[j + 2] = detail[j];
 			}
 		} else if (cmd == 1) {
-			printf("fileId: %d", fileCnt);
+			printf("fileId: %d\n", fileCnt);
 			int j;
 			size = 259;
 			for (j = 0; j < 256; j++) {
