@@ -19,7 +19,7 @@ int main(int argc, char* argv[]) {
 		char detail[256];
 		int size = 35;
 		char buf[259];
-		scanf("%d %d\n", &cmd, &sl);
+		scanf("%d %d", &cmd, &sl);
 		if (cmd == 3) {
 			int j = 0;
 			for (j = 0; j < fileCnt; j++) {
@@ -31,17 +31,20 @@ int main(int argc, char* argv[]) {
 		}
 		if (cmd == 2) {
 			int fid = 0, rw;
-			scanf("%d %d\n", &rw, &fid);
+			scanf("%d %d", &rw, &fid);
 			int fd;
-			fd = open(files[fid], O_WRONLY|O_APPEND);
 			if (rw == 0) {
+				fd = open(files[fid], O_RDONLY);
 				read(fd, buf, 256);
 				printf("%s\n", buf);
 			}
 			else if (rw == 1) {
+				fd = open(files[fid], O_WRONLY|O_APPEND);
 				write(fd, files[fid], strlen(files[fid]));
 			}
 			else {
+				
+			fd = open(files[fid], O_RDWR);
 				write(fd, files[fid], strlen(files[fid]));
 				read(fd, buf, 256);
 				printf("%s\n", buf);
@@ -56,18 +59,20 @@ int main(int argc, char* argv[]) {
 			printf("userId: %d\n", userCnt);
 			int j;
 			for (j = 0; j < 32; j++) {
-				users[userCnt++][j] = detail[j];
+				users[userCnt][j] = detail[j];
 				buf[j + 2] = detail[j];
 			}
+			userCnt++;
 		} else if (cmd == 1) {
 			buf[0] = '1';
 			printf("fileId: %d\n", fileCnt);
 			int j;
 			size = 259;
 			for (j = 0; j < 256; j++) {
-				files[fileCnt++][j] = detail[j];
+				files[fileCnt][j] = detail[j];
 				buf[j + 2] = detail[j];
 			}
+			fileCnt++;
 			// int fd;
 			// fd = open(files[fileCnt - 1], O_WRONLY|O_APPEND|O_CREAT);
 			// write(fd, files[fileCnt - 1], strlen(files[fileCnt - 1]));
