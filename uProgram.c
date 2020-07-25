@@ -28,26 +28,28 @@ int main(int argc, char* argv[]) {
 			for (j = 0; j < userCnt; j++) {
 				printf("userid: %d- userid: %s\n", j, users[j]);
 			}
+			continue;
 		}
 		if (cmd == 2) {
 			int fid = 0, rw;
 			scanf("%d %d", &rw, &fid);
 			int fd;
 			if (rw == 0) {
+				char buff[1000];
 				fd = open(files[fid], O_RDONLY);
-				read(fd, buf, 256);
-				printf("%s\n", buf);
+				read(fd, buff, 256);
+				printf("%s\n", buff);
 			}
 			else if (rw == 1) {
 				fd = open(files[fid], O_WRONLY|O_APPEND);
 				write(fd, files[fid], strlen(files[fid]));
 			}
 			else {
-				
+				char buff[1000];
 			fd = open(files[fid], O_RDWR);
 				write(fd, files[fid], strlen(files[fid]));
-				read(fd, buf, 256);
-				printf("%s\n", buf);
+				read(fd, buff, 256);
+				printf("%s\n", buff);
 			}
 			close(fd);
 			continue;
