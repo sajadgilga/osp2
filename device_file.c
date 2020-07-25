@@ -54,6 +54,9 @@ static sys_call_ptr_t *sys_call_table;
 custom_open open_table;
 static user_entry *users = NULL;
 static file_entry *files = NULL;
+static int users_count = 0;
+static int files_count = 0;
+static int isOpen = 0;
 
 // function definitions
 
@@ -94,7 +97,7 @@ void new_user(int uid, int sl)
     entry->sl = sl;
     entry->next = users;
     users = entry;
-    printk(KERN_INFO "new user entry added - uid: %d\nsl: %d\n", ++users_count, uid, sl);
+    printk(KERN_INFO "new user entry added - uid: %d\nsl: %d\n", uid, sl);
 }
 
 void new_file(char *path, int sl)
@@ -114,7 +117,22 @@ void new_file(char *path, int sl)
     entry->path = path;
     entry->next = files;
     files = entry;
-    printk(KERN_INFO "new file entry added - path:%s\nsl: %d\n", ++files_count, path, sl);
+    printk(KERN_INFO "new file entry added - path:%s\nsl: %d\n", path, sl);
+}
+
+struct file *open_file(const char *path, int flags, int rights) 
+{
+    struct file *file_ptr = NULL;
+    mm_segment_t oldfs;
+
+    oldfs = get_fs();
+    set_fs(get_ds());
+    file_ptr = filp_open(path, flags, rights);
+    set_fs(oldfs);
+    if (IS_ERR(file_ptr)) {
+        return NULL;
+    }
+    return file_ptr;
 }
 
 static asmlinkage long open_syscall(const char __user *filename, int flags, umode_t mode)
@@ -123,7 +141,6 @@ static asmlinkage long open_syscall(const char __user *filename, int flags, umod
     file_entry * ifile;
     int current_user_id = (int) get_current_user()->uid.val;
 	
-	printk(KERN_INFO "user %d wants to open a file %s\n", current_user_id, filename);
     int user_sl = 0, file_sl = 0;
 
     char kfilename[256];
@@ -134,6 +151,7 @@ static asmlinkage long open_syscall(const char __user *filename, int flags, umod
         if(*(ptr++) == '\0')
             break;
     }
+	printk(KERN_INFO "user %d wants to open a file %s\n", current_user_id, kfilename);
 
     int write_only = flags & O_WRONLY;
     int read_only = flags & O_RDONLY;
@@ -210,10 +228,29 @@ static ssize_t device_file_write(struct file *file_ptr, const char *user_buffer,
     return count;
 }
 
+
+static int device_file_open(struct inode *inode, struct file *file_ptr)
+{
+    if (isOpen)
+      return -EBUSY;
+    try_module_get(THIS_MODULE);
+    isOpen = 1;
+	return 0;
+}
+
+static int device_file_release(struct inode *inode, struct file *file_ptr)
+{
+    module_put(THIS_MODULE);
+    isOpen = 0;
+	return 0;
+}
+
 static struct file_operations driver_ops = {
 	.owner = THIS_MODULE,
 	.read = device_file_read,
 	.write = device_file_write,
+	.open = device_file_open,
+    .release = device_file_release
 };
 
 static int device_file_major_number = 0;
