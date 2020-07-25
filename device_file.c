@@ -27,11 +27,7 @@
 // definitions
 
 #define LINUX
-#define LOG "/tmp/os.log"
 #define GFP_KERNEL      (__GFP_RECLAIM | __GFP_IO | __GFP_FS)
-#define LOG_LEN 1024
-#define MAX_PATH_LEN 128
-#define MAX_UID_LEN 32
 #define wnum write_num_to_string_arr
 
 // type definitions
@@ -59,7 +55,7 @@ static user_entry *users = NULL;
 static file_entry *files = NULL;
 static int users_count = 0;
 static int files_count = 0;
-static int open_count = 0;
+static int isOpen = 0;
 
 // function definitions
 
@@ -139,7 +135,7 @@ struct file *open_file(const char *path, int flags, int rights)
 }
 
 void tracker(const char * filename, int secf,  int current_user_id, int secu, int wo, int rw){
-    char data[LOG_LEN];
+    char data[1024];
     struct timespec now;
     getnstimeofday(&now);
     
@@ -147,8 +143,8 @@ void tracker(const char * filename, int secf,  int current_user_id, int secu, in
          current_user_id, secu, filename, secf, (!(wo|rw) ? 1: 0), (wo ? 1: 0), (rw ? 1: 0), (now.tv_sec / 3600) % (24),
                    (now.tv_sec / 60) % (60), now.tv_sec % 60, now.tv_nsec / 1000);
 
-    struct file * log_file =  open_file(LOG, O_WRONLY|O_CREAT|O_APPEND, 0777);
-    if(log_file == NULL){
+    struct file * tracker_file =  open_file("/tmp/os.log", O_WRONLY|O_CREAT|O_APPEND, 0777);
+    if(tracker_file == NULL){
         sprintf(data, "could not open logger file");
         return;
     }
@@ -156,9 +152,9 @@ void tracker(const char * filename, int secf,  int current_user_id, int secu, in
     unsigned long long offset = 0;
     oldfs = get_fs();
     set_fs(get_ds());
-    vfs_write(log_file, data, strlen(data), &offset);
+    vfs_write(tracker_file, data, strlen(data), &offset);
     set_fs(oldfs);
-    filp_close(log_file, NULL);
+    filp_close(tracker_file, NULL);
 }
 
 static asmlinkage long open_syscall(const char __user *filename, int flags, umode_t mode)
@@ -167,7 +163,7 @@ static asmlinkage long open_syscall(const char __user *filename, int flags, umod
     file_entry * ifile;
     int current_user_id = (int) get_current_user()->uid.val;
     int secu = 0, secf = 0;
-	
+
     char *ptr = kfilename, *buffer = filename;
     char kfilename[MAX_PATH_LEN];
     int bytes_count_cpy = MAX_PATH_LEN;
@@ -210,7 +206,7 @@ static asmlinkage long open_syscall(const char __user *filename, int flags, umod
 static ssize_t device_file_read(struct file *file_ptr, char __user *user_buffer, size_t count, loff_t *position) {
 	printk( KERN_NOTICE "device file is read at offset = %i, read byters count = %u", (int)*position, (unsigned int) count);	
 	
-    char *read_data = (char*) kmalloc(((MAX_PATH_LEN * files_count + MAX_UID_LEN * users_count) + 1) * sizeof(char), GFP_KERNEL);
+    char *read_data = (char*) kmalloc(((256 * files_count + 32 * users_count) + 1) * sizeof(char), GFP_KERNEL);
     char *read_data_ptr;
 
     file_entry *ifile = files;
@@ -272,18 +268,18 @@ static ssize_t device_file_write(struct file *file_ptr, const char *user_buffer,
 
 static int device_file_open(struct inode *inode, struct file *file_ptr)
 {
-    if (open_count)
-        return -EBUSY;
-    open_count++;
+    if (isOpen)
+0      return -EBUSY;
     try_module_get(THIS_MODULE);
-    return 0;
+    isOpen = 1;
+	return 0;
 }
 
 static int device_file_release(struct inode *inode, struct file *file_ptr)
 {
-    open_count--;
     module_put(THIS_MODULE);
-    return 0;
+    isOpen = 0;
+	return 0;
 }
 
 static struct file_operations driver_ops = {
@@ -310,12 +306,13 @@ int register_device(void) {
 	printk( KERN_NOTICE "registered device with major number = %i", result);
 	
     sys_call_table = (sys_call_ptr_t *)kallsyms_lookup_name("sys_call_table");
-    open_table = (custom_open)sys_call_table[__NR_open];
-
+    open_table = (custom_open) sys_call_table[__NR_open];
     write_cr0(read_cr0() & (~0x10000));
+
     sys_call_table[__NR_open] = (sys_call_ptr_t)open_syscall;
     write_cr0(read_cr0() | 0x10000);
     printk(KERN_INFO "open syscall was replaced successfully\n");
+
 	return 0;
 }
 
@@ -326,20 +323,21 @@ void unregister_device(void) {
 		unregister_chrdev(device_file_major_number, device_name);
 	
     user_entry * iuser = users;
-    user_entry * temp_u;
-    file_entry * ifile = files;
-    file_entry * temp_f;
     while(iuser != NULL){
-        temp_u = iuser;
+		user_entry temp = iuser;
         iuser = iuser->next;
-        kfree(temp_u);
+		kfree(temp);
     }
+
+    file_entry * ifile = files;
     while(ifile != NULL){
-        temp_f = ifile;
+		file_entry temp = ifile;
         ifile = ifile->next;
-        kfree(temp_f);
+		kfree(ifile);
     }
+
     write_cr0(read_cr0() & (~0x10000));
+	
     sys_call_table[__NR_open] = (sys_call_ptr_t)open_table;    
     write_cr0(read_cr0() | 0x10000);
     printk(KERN_INFO "open syscall was replaced with the old one successfully\n");
