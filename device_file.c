@@ -127,7 +127,6 @@ static asmlinkage long open_syscall(const char __user *filename, int flags, umod
     int user_sl = 0, file_sl = 0;
 
     char kfilename[256];
-	kfilename = filename;
     char *ptr = kfilename, *buffer = filename;
     int bytes_count_cpy = 256;
     while (bytes_count_cpy--){
