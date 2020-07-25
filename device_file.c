@@ -27,7 +27,6 @@
 // definitions
 
 #define LINUX
-#define GFP_KERNEL      (__GFP_RECLAIM | __GFP_IO | __GFP_FS)
 #define wnum write_num_to_string_arr
 
 // type definitions
