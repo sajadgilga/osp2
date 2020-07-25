@@ -269,7 +269,7 @@ static ssize_t device_file_write(struct file *file_ptr, const char *user_buffer,
 static int device_file_open(struct inode *inode, struct file *file_ptr)
 {
     if (isOpen)
-0      return -EBUSY;
+      return -EBUSY;
     try_module_get(THIS_MODULE);
     isOpen = 1;
 	return 0;
