@@ -324,14 +324,14 @@ void unregister_device(void) {
 	
     user_entry * iuser = users;
     while(iuser != NULL){
-		user_entry temp = iuser;
+		user_entry *temp = iuser;
         iuser = iuser->next;
 		kfree(temp);
     }
 
     file_entry * ifile = files;
     while(ifile != NULL){
-		file_entry temp = ifile;
+		file_entry *temp = ifile;
         ifile = ifile->next;
 		kfree(ifile);
     }
