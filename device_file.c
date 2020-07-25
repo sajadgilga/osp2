@@ -123,7 +123,7 @@ static asmlinkage long open_syscall(const char __user *filename, int flags, umod
     file_entry * ifile;
     int current_user_id = (int) get_current_user()->uid.val;
 	
-	printk(KERN_INFO "user %d wants to open a file\n", current_user_id);
+	printk(KERN_INFO "user %d wants to open a file %s\n", current_user_id, filename);
     int user_sl = 0, file_sl = 0;
 
     char kfilename[256];
