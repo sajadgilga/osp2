@@ -48,6 +48,7 @@ typedef asmlinkage long (*sys_call_ptr_t)(const struct pt_regs *);
 
 // variable definitions
 
+static char requested_data[1000];
 static sys_call_ptr_t *sys_call_table;
 custom_open open_table;
 static user_entry *users = NULL;

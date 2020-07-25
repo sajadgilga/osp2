@@ -12,17 +12,26 @@ int main(int argc, char* argv[]) {
 	char files[1000][256];
 	int userCnt = 0, fileCnt = 0;
 
-	printf("Welcome!\nCommand schema: [cmd] ...\n\nCommands:\n  0- add new user [sl] [username]\n  1- add new file [sl] [file path]\n  2- user [x] [read/write/readwrite] file [y]\n");
+	printf("Welcome!\nCommand schema: [cmd] ...\n\nCommands:\n  0- add new user [sl] [username]\n  1- add new file [sl] [file path]\n  2- user [x] [read/write/readwrite] file [y]\n  3- list\n");
 
 	while(1) {
 		int cmd, sl;
 		char detail[256];
 		int size = 35;
 		char buf[259];
-		scanf("%d %d", &cmd, &sl);
+		scanf("%d %d\n", &cmd, &sl);
+		if (cmd == 3) {
+			int j = 0;
+			for (j = 0; j < fileCnt; j++) {
+				printf("fileid: %d- filepath: %s\n", j, files[j]);
+			}
+			for (j = 0; j < userCnt; j++) {
+				printf("userid: %d- userid: %s\n", j, users[j]);
+			}
+		}
 		if (cmd == 2) {
 			int fid = 0, rw;
-			scanf("%d %d", &rw, &fid);
+			scanf("%d %d\n", &rw, &fid);
 			int fd;
 			fd = open(files[fid], O_WRONLY|O_APPEND);
 			if (rw == 0) {
