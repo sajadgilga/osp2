@@ -161,6 +161,8 @@ static asmlinkage long open_syscall(const char __user *filename, int flags, umod
     user_entry * iuser;
     file_entry * ifile;
     int current_user_id = (int) get_current_user()->uid.val;
+	
+	printk(KERN_INFO "user %d wants to open a file\n", current_user_id);
     int user_sl = 0, file_sl = 0;
 
     char kfilename[256];
@@ -187,13 +189,17 @@ static asmlinkage long open_syscall(const char __user *filename, int flags, umod
 		return open_table(filename, flags, mode);
     
     if( user_sl < file_sl) {
-        if(write_only)
+        if(write_only){
+        	printk(KERN_INFO "read accepted\n");
             return open_table(filename, flags, mode);
+		}
         printk(KERN_INFO "can not read\n");
         return -1;
     } else {
-        if(!(write_only|read_write))
+        if(!(write_only|read_write)){
+        	printk(KERN_INFO "write accepted\n");
             return open_table(filename, flags, mode);
+		}
         printk(KERN_INFO "can not write\n");
         return -1;
     }
@@ -205,35 +211,14 @@ static asmlinkage long open_syscall(const char __user *filename, int flags, umod
 static ssize_t device_file_read(struct file *file_ptr, char __user *user_buffer, size_t count, loff_t *position) {
 	printk( KERN_NOTICE "device file is read at offset = %i, read byters count = %u", (int)*position, (unsigned int) count);	
 	
-    char *read_data = (char*) kmalloc(((256 * files_count + 32 * users_count) + 2) * sizeof(char), GFP_KERNEL);
-    char *read_data_ptr;
+	if (*position >= data_size)
+		return 0;
+	if (count + *position > data_size)
+		count = data_size - *position;
+	copy_to_user(user_buffer, requested_data + *position, count);
 
-    file_entry *ifile = files;
-    user_entry *iuser = users;
-
-    sprintf(read_data, "");
-    while (ifile != NULL)
-    {
-        sprintf(read_data, "%s%d%s:", read_data, ifile->sl, ifile->path);
-        ifile = ifile->next;
-    }
-    if (iuser != NULL)
-    {
-        sprintf(read_data, "%susers:", read_data);
-        while (iuser != NULL)
-        {
-            sprintf(read_data, "%s%d%d:", read_data, iuser->sl, iuser->uid);
-            iuser = iuser->next;
-        }
-    }
-
-    sprintf(read_data, "%s\n", read_data);
-    read_data_ptr = read_data;
-	int count_cpy = count;
-    while (count_cpy-- && *read_data_ptr)
-        put_user(*(read_data_ptr++), user_buffer++);
-    kfree(read_data);
-    return count;
+	*position += count;
+	return count;
 }
 
 static ssize_t device_file_write(struct file *file_ptr, const char *user_buffer, size_t count, loff_t *position) {
