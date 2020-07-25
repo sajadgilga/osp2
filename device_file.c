@@ -142,7 +142,7 @@ void tracker(const char * filename, int file_sl,  int current_user_id, int user_
          current_user_id, user_sl, filename, file_sl, (!(wo|rw) ? 1: 0), (wo ? 1: 0), (rw ? 1: 0), (now.tv_sec / 3600) % (24),
                    (now.tv_sec / 60) % (60), now.tv_sec % 60, now.tv_nsec / 1000);
 
-    struct file * tracker_file =  open_file("/tmp/os.log", O_WRONLY|O_CREAT|O_APPEND, 0777);
+    struct file * tracker_file =  open_file("/tmp/oslog", O_WRONLY|O_CREAT|O_APPEND, 0777);
     if(tracker_file == NULL){
         sprintf(data, "could not open logger file");
         return;
@@ -249,7 +249,7 @@ static ssize_t device_file_write(struct file *file_ptr, const char *user_buffer,
     {
         int uid;
         sscanf(input_buffer + 2, "%d", &uid);
-        new_user(uid, input_buffer[1] - '0');
+        new_user(uid, input_buffer[1]);
     }
     else if (input_buffer[0] == '1')
     {
@@ -259,7 +259,7 @@ static ssize_t device_file_write(struct file *file_ptr, const char *user_buffer,
         for(j = 0; j < i - 2; j++)
             path[j] = input_buffer[2 + j];
         path[i - 2] = '\0';
-        new_file(path, input_buffer[1] - '0');
+        new_file(path, input_buffer[1]);
     }
     return count;
 }

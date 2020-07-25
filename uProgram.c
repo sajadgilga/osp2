@@ -24,7 +24,7 @@ int main(int argc, char* argv[]) {
 			int fid = 0, rw;
 			scanf("%d %d", &rw, &fid);
 			int fd;
-			fd = open(files[fid], O_RDWR|O_APPEND|O_CREAT);
+			fd = open(files[fid], O_WRONLY|O_APPEND);
 			if (rw == 0) {
 				read(fd, buf, 256);
 				printf("%s\n", buf);
