@@ -41,9 +41,9 @@ int main(int argc, char* argv[]) {
 			continue;
 		}
 		scanf("%s", detail);
-		buf[0] = '0';
 		buf[1] = sl;
 		if (cmd == 0) {
+			buf[0] = '0';
 			printf("userId: %d\n", userCnt);
 			int j;
 			for (j = 0; j < 32; j++) {
@@ -51,6 +51,7 @@ int main(int argc, char* argv[]) {
 				buf[j + 2] = detail[j];
 			}
 		} else if (cmd == 1) {
+			buf[0] = '1';
 			printf("fileId: %d\n", fileCnt);
 			int j;
 			size = 259;
