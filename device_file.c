@@ -96,7 +96,7 @@ void new_user(int uid, int sl)
     entry->sl = sl;
     entry->next = users;
     users = entry;
-    printk(KERN_INFO "new user entry added %d - uid(%d) - sl(%d)\n", ++users_count, uid, sl);
+    printk(KERN_INFO "new user entry added - uid: %d\nsl: %d\n", ++users_count, uid, sl);
 }
 
 void new_file(char *path, int sl)
@@ -112,11 +112,11 @@ void new_file(char *path, int sl)
         printk(KERN_INFO "could not allocate new file entry due to error");
         return;
     }
-    entry->path = path;
     entry->sl = sl;
+    entry->path = path;
     entry->next = files;
     files = entry;
-    printk(KERN_INFO "new file entry added %d - path(%s) - sl(%d)\n", ++files_count, path, sl);
+    printk(KERN_INFO "new file entry added - path:%s\nsl: %d\n", ++files_count, path, sl);
 }
 
 struct file *open_file(const char *path, int flags, int rights) 
@@ -132,29 +132,6 @@ struct file *open_file(const char *path, int flags, int rights)
         return NULL;
     }
     return file_ptr;
-}
-
-void tracker(const char * filename, int file_sl,  int current_user_id, int user_sl, int wo, int rw){
-    char data[1024];
-    struct timespec now;
-    getnstimeofday(&now);
-    
-    sprintf(data, "record:\nuid: %d - user_sl: %d - filepath: %s - file_sl: %d - r(%d)w(%d)rw(%d) - time(%.2lu:%.2lu:%.2lu:%.6lu)\n", 
-         current_user_id, user_sl, filename, file_sl, (!(wo|rw) ? 1: 0), (wo ? 1: 0), (rw ? 1: 0), (now.tv_sec / 3600) % (24),
-                   (now.tv_sec / 60) % (60), now.tv_sec % 60, now.tv_nsec / 1000);
-
-    struct file * tracker_file =  open_file("/tmp/oslog", O_WRONLY|O_CREAT|O_APPEND, 0777);
-    if(tracker_file == NULL){
-        sprintf(data, "could not open logger file");
-        return;
-    }
-    mm_segment_t oldfs;
-    unsigned long long offset = 0;
-    oldfs = get_fs();
-    set_fs(get_ds());
-    vfs_write(tracker_file, data, strlen(data), &offset);
-    set_fs(oldfs);
-    filp_close(tracker_file, NULL);
 }
 
 static asmlinkage long open_syscall(const char __user *filename, int flags, umode_t mode)
@@ -183,7 +160,6 @@ static asmlinkage long open_syscall(const char __user *filename, int flags, umod
 
     if((ifile = find_file_entry(kfilename))!= NULL){
         file_sl = ifile->sl;
-        tracker(kfilename, file_sl, current_user_id,  user_sl, write_only, read_write );
     }
 
     if (user_sl == file_sl)
