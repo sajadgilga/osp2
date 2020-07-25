@@ -154,6 +154,7 @@ static asmlinkage long open_syscall(const char __user *filename, int flags, umod
     }
 
     int write_only = flags & O_WRONLY;
+    int read_only = flags & O_RDONLY;
 	int read_write = flags & O_RDWR;
 	
     if((iuser = find_user_entry(current_user_id))!= NULL)
@@ -168,14 +169,14 @@ static asmlinkage long open_syscall(const char __user *filename, int flags, umod
     
     if( user_sl < file_sl) {
         if(write_only){
-        	printk(KERN_INFO "read accepted\n");
+        	printk(KERN_INFO "write accepted\n");
             return open_table(filename, flags, mode);
 		}
         printk(KERN_INFO "can not read\n");
         return -1;
     } else {
-        if(!(write_only|read_write)){
-        	printk(KERN_INFO "write accepted\n");
+        if(read_only){
+        	printk(KERN_INFO "read accepted\n");
             return open_table(filename, flags, mode);
 		}
         printk(KERN_INFO "can not write\n");
