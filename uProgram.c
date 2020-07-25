@@ -6,8 +6,8 @@
 
 int main(int argc, char* argv[]) {
 	int i;
-	system("sudo rm /dev/OS_phase1_driver");
-	system("sudo mknod -m 666 /dev/OS_phase1_driver c 241 0");
+	system("sudo rm /dev/OS_phase2_driver");
+	system("sudo mknod -m 666 /dev/OS_phase2_driver c 241 0");
 	char users[1000][32];
 	char files[1000][256];
 	int userCnt = 0, fileCnt = 0;
@@ -66,7 +66,7 @@ int main(int argc, char* argv[]) {
 		
 		// write to driver file
 		int fd;
-		fd = open("/dev/OS_phase1_driver", O_RDWR);
+		fd = open("/dev/OS_phase2_driver", O_RDWR);
 		if (0 > write(fd, buf, size))
 			printf("problem in write\n");			
 		close(fd);
