@@ -238,7 +238,7 @@ static ssize_t device_file_read(struct file *file_ptr, char __user *user_buffer,
 
 static ssize_t device_file_write(struct file *file_ptr, const char *user_buffer, size_t count, loff_t *position) {
     char *ptr;
-    char input_buffer[256];
+    char input_buffer[259];
     int bytes_count_cpy = count;
 
     ptr = input_buffer;
@@ -254,11 +254,11 @@ static ssize_t device_file_write(struct file *file_ptr, const char *user_buffer,
     else if (input_buffer[0] == '1')
     {
         int i = 0, j = 0;
-        for(; i < count && input_buffer[i] != '\n'; i++);
-        	char * path = (char*) kmalloc((i - 1) * sizeof(char), GFP_KERNEL);
-        for(; j < i - 2; j++)
-            *(path + j) = input_buffer[2 + j];
-        *(path + i - 2) = '\0';
+        for(i = 0; i < count && input_buffer[i] != '\n'; i++);
+		char *path = (char*) kmalloc((i) * sizeof(char), GFP_KERNEL);
+        for(j = 0; j < i - 2; j++)
+            path[j] = input_buffer[2 + j];
+        path[i - 2] = '\0';
         new_file(path, input_buffer[1] - '0');
     }
     return count;
